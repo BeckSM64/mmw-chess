@@ -29,9 +29,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SFML)
 
 # Create chat executable
-# add_executable(chat main.cpp)
-add_executable(Server Server.cpp)
-add_executable(Client Client.cpp)
+add_executable(Server ${CMAKE_SOURCE_DIR}/src/Server.cpp)
+add_executable(
+  Client
+  ${CMAKE_SOURCE_DIR}/src/Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/ChessBoard.cpp
+  ${CMAKE_SOURCE_DIR}/src/Piece.cpp
+  ${CMAKE_SOURCE_DIR}/src/Pawn.cpp
+  ${CMAKE_SOURCE_DIR}/src/Knight.cpp
+  ${CMAKE_SOURCE_DIR}/src/Bishop.cpp
+  ${CMAKE_SOURCE_DIR}/src/Rook.cpp
+  ${CMAKE_SOURCE_DIR}/src/Queen.cpp
+  ${CMAKE_SOURCE_DIR}/src/King.cpp
+)
+
+target_include_directories(Client PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 
 # Link against middleware
 target_link_libraries(Server PRIVATE mmw::mmw pthread sfml-graphics sfml-window sfml-system)
