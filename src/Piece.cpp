@@ -6,8 +6,12 @@ Piece::Piece(PieceColor color, sf::Vector2i position, const std::string& texture
     if (!texture.loadFromFile(texturePath)) {
         std::cerr << "Failed to load texture: " << texturePath << std::endl;
     }
+    texture.setSmooth(true);
+    
     sprite.setTexture(texture);
     sprite.setOrigin(texture.getSize().x / 2.f, texture.getSize().y / 2.f);
+
+    sprite.setScale(2.0f, 2.0f); // 90% of the original texture size
 }
 
 void Piece::draw(sf::RenderWindow& window) {
