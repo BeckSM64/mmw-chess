@@ -36,17 +36,21 @@ void onClientMove(void* data) {
 
     // Forward move to all clients
     mmw_publish_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, move, sizeof(PlayerMove), MMW_BEST_EFFORT);
-    std::cout << "Published Message" << std::endl;
 }
 
 void onPlayerIdRequest(const char* uuid) {
     PlayerIdResponse playerIdResponse;
     playerIdResponse.playerId = gameState.connectedPlayers;
+
+    // copy and null terminate
     strncpy(playerIdResponse.uniqueId, uuid, 32);
     playerIdResponse.uniqueId[32] = '\0';
+
     mmw_publish_raw(PLAYER_ID_RESPONSE_TOPIC, &playerIdResponse, sizeof(playerIdResponse), MMW_BEST_EFFORT);
+
     gameState.connectedPlayers++;
-    std::cout << "Current number of connected players: " << std::to_string(gameState.connectedPlayers) << std::endl;
+    std::cout << "Current number of connected players: " << gameState.connectedPlayers << std::endl;
+
     if (gameState.connectedPlayers == MAX_PLAYERS) {
         gameState.isGameStarted = true;
         gameState.playerTurnId = 0;
@@ -61,36 +65,16 @@ int main() {
         return 1;
     }
 
-    if (mmw_create_publisher(PLAYER_MOVE_SUBSCRIBE_TOPIC) != MMW_OK) {
-        std::cerr << "Failed to create publisher\n";
-        return 1;
-    }
+    mmw_create_publisher(PLAYER_MOVE_SUBSCRIBE_TOPIC);
+    mmw_create_publisher(PLAYER_ID_RESPONSE_TOPIC);
+    mmw_create_publisher(GAME_STATE_UPDATE_TOPIC);
 
-    if (mmw_create_publisher(PLAYER_ID_RESPONSE_TOPIC) != MMW_OK) {
-        std::cerr << "Failed to create publisher\n";
-        return 1;
-    }
-
-    if (mmw_create_publisher(GAME_STATE_UPDATE_TOPIC) != MMW_OK) {
-        std::cerr << "Failed to create subscriber\n";
-        return 1;
-    }
-
-    if (mmw_create_subscriber_raw(PLAYER_MOVE_PUBLISH_TOPIC, onClientMove) != MMW_OK) {
-        std::cerr << "Failed to create subscriber\n";
-        return 1;
-    }
-
-    if (mmw_create_subscriber(PLAYER_ID_REQUEST_TOPIC, onPlayerIdRequest) != MMW_OK) {
-        std::cerr << "Failed to create subscriber\n";
-        return 1;
-    }
+    mmw_create_subscriber_raw(PLAYER_MOVE_PUBLISH_TOPIC, onClientMove);
+    mmw_create_subscriber(PLAYER_ID_REQUEST_TOPIC, onPlayerIdRequest);
 
     std::cout << "Server running..." << std::endl;
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    while (true) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     mmw_cleanup();
     return 0;
