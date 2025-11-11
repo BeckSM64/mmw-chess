@@ -7,14 +7,16 @@
 #include "King.h"
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <cstdint>
 
 ChessBoard::ChessBoard(float w, float h, float pad)
-    : boardWidth(w - 2*pad), boardHeight(h), padding(pad)
+    : boardWidth(w), boardHeight(h), padding(pad)
 {
+    // tile size based on height so board fills vertical space
     tileSize = boardHeight / 8.f;
 
-    // CENTER THE BOARD HORIZONTALLY
-    boardX = (boardWidth - 8 * tileSize) / 2.f + padding; // centered
+    // CENTER THE BOARD HORIZONTALLY (minimal, non-invasive change)
+    boardX = (boardWidth - 8.f * tileSize) / 2.f;
     boardY = 0.f;
 
     for (int y=0; y<8; ++y)
@@ -40,68 +42,72 @@ void ChessBoard::initPieces() {
     // Pawns
     for (int x = 0; x < 8; ++x) {
         squares[1][x] = new Pawn(PieceColor::Black,
-            sf::Vector2i(boardX + x*tileSize + tileSize/2,
-                         boardY + 1*tileSize + tileSize/2));
+            sf::Vector2i(static_cast<int>(boardX + x*tileSize + tileSize/2),
+                         static_cast<int>(boardY + 1*tileSize + tileSize/2)));
         squares[6][x] = new Pawn(PieceColor::White,
-            sf::Vector2i(boardX + x*tileSize + tileSize/2,
-                         boardY + 6*tileSize + tileSize/2));
+            sf::Vector2i(static_cast<int>(boardX + x*tileSize + tileSize/2),
+                         static_cast<int>(boardY + 6*tileSize + tileSize/2)));
     }
 
     // Rooks
     squares[0][0] = new Rook(PieceColor::Black,
-        sf::Vector2i(boardX + 0*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 0*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[0][7] = new Rook(PieceColor::Black,
-        sf::Vector2i(boardX + 7*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 7*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[7][0] = new Rook(PieceColor::White,
-        sf::Vector2i(boardX + 0*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 0*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
     squares[7][7] = new Rook(PieceColor::White,
-        sf::Vector2i(boardX + 7*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 7*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
 
     // Knights
     squares[0][1] = new Knight(PieceColor::Black,
-        sf::Vector2i(boardX + 1*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 1*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[0][6] = new Knight(PieceColor::Black,
-        sf::Vector2i(boardX + 6*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 6*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[7][1] = new Knight(PieceColor::White,
-        sf::Vector2i(boardX + 1*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 1*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
     squares[7][6] = new Knight(PieceColor::White,
-        sf::Vector2i(boardX + 6*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 6*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
 
     // Bishops
     squares[0][2] = new Bishop(PieceColor::Black,
-        sf::Vector2i(boardX + 2*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 2*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[0][5] = new Bishop(PieceColor::Black,
-        sf::Vector2i(boardX + 5*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 5*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[7][2] = new Bishop(PieceColor::White,
-        sf::Vector2i(boardX + 2*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 2*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
     squares[7][5] = new Bishop(PieceColor::White,
-        sf::Vector2i(boardX + 5*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 5*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
 
     // Queens
     squares[0][3] = new Queen(PieceColor::Black,
-        sf::Vector2i(boardX + 3*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 3*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[7][3] = new Queen(PieceColor::White,
-        sf::Vector2i(boardX + 3*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 3*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
 
     // Kings
     squares[0][4] = new King(PieceColor::Black,
-        sf::Vector2i(boardX + 4*tileSize + tileSize/2, boardY + 0*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 4*tileSize + tileSize/2), static_cast<int>(boardY + 0*tileSize + tileSize/2)));
     squares[7][4] = new King(PieceColor::White,
-        sf::Vector2i(boardX + 4*tileSize + tileSize/2, boardY + 7*tileSize + tileSize/2));
+        sf::Vector2i(static_cast<int>(boardX + 4*tileSize + tileSize/2), static_cast<int>(boardY + 7*tileSize + tileSize/2)));
 }
 
 sf::Vector2i ChessBoard::getTileAtPixel(float px, float py) {
-    int tx = (px - boardX) / tileSize;
-    int ty = (py - boardY) / tileSize;
+    int tx = static_cast<int>((px - boardX) / tileSize);
+    int ty = static_cast<int>((py - boardY) / tileSize);
     if (tx<0 || tx>=8 || ty<0 || ty>=8) return sf::Vector2i(-1,-1);
     return sf::Vector2i(tx, ty);
 }
 
 bool ChessBoard::hasPieceAt(int x, int y, uint32_t /*playerId*/) {
+    if (x<0||x>=8||y<0||y>=8) return false;
     return squares[y][x] != nullptr;
 }
 
 void ChessBoard::applyMove(int fromX, int fromY, int toX, int toY) {
+    if (fromX<0||fromX>=8||fromY<0||fromY>=8) return;
+    if (toX<0||toX>=8||toY<0||toY>=8) return;
+
     squares[toY][toX] = squares[fromY][fromX];
     squares[fromY][fromX] = nullptr;
     if (squares[toY][toX])

@@ -14,6 +14,11 @@ public:
     bool hasPieceAt(int x, int y, uint32_t playerId);
     void applyMove(int fromX, int fromY, int toX, int toY);
 
+    // Small getters added so client can draw highlights without touching internals
+    float getTileSize() const { return tileSize; }
+    float getBoardX() const { return boardX; }
+    float getBoardY() const { return boardY; }
+
 private:
     float boardWidth, boardHeight;
     float tileSize;
