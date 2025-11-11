@@ -1,8 +1,25 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <cstdint>
+#include <thread>
+#include <atomic>
 #include "MMW.h"         // still safe to initialize MMW if you want
 #include "ChessBoard.h"
+#include "PlayerMove.h"
+
+const char* PLAYER_MOVE_PUBLISH_TOPIC = "PLAYER_MOVE_PUBLISH";
+const char* PLAYER_MOVE_SUBSCRIBE_TOPIC = "PLAYER_MOVE_SUBSCRIBE";
+std::thread subscriberThread;
+std::atomic<bool> running{true};
+ChessBoard board(1920.f, 1080.f, 200.f);
+uint32_t myPlayerId = 1;
+
+void player_move_callback(void* message) {
+    PlayerMove* remotePlayerMove = reinterpret_cast<PlayerMove*>(message);
+    if (remotePlayerMove->playerId != myPlayerId) {
+        board.applyMove(remotePlayerMove->fromX, remotePlayerMove->fromY, remotePlayerMove->toX, remotePlayerMove->toY);
+    }
+}
 
 void resizeView(sf::RenderWindow& window, sf::View& view) {
     const float targetWidth = 1920.f;
@@ -23,19 +40,31 @@ void resizeView(sf::RenderWindow& window, sf::View& view) {
 }
 
 int main(int argc, char** argv) {
-    uint32_t myPlayerId = 1;
     if (argc >= 2) myPlayerId = static_cast<uint32_t>(atoi(argv[1]));
     std::cout << "Player ID: " << myPlayerId << std::endl;
 
     // optional: initialize middleware (harmless if not used yet)
     mmw_set_log_level(MMW_LOG_LEVEL_OFF);
     mmw_initialize("127.0.0.1", 5000);
+    mmw_create_publisher(PLAYER_MOVE_PUBLISH_TOPIC);
+    mmw_create_subscriber_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, player_move_callback);
+
+    // Setup subscriber thread
+    // subscriberThread = std::thread([]() {
+    //     if (mmw_create_subscriber_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, player_move_callback) != MMW_OK) {
+    //         std::cout << "Failed to create subscriber" << std::endl;
+    //         return;
+    //     }
+    //     while (running) {
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //     }
+    // });
 
     sf::RenderWindow window(sf::VideoMode(1280,720), "MMW Chess - Local Play");
     sf::View view(sf::FloatRect(0,0,1920,1080));
     window.setView(view);
 
-    ChessBoard board(1920.f, 1080.f, 200.f);
+    // ChessBoard board(1920.f, 1080.f, 200.f);
     board.initPieces();
 
     sf::Vector2i selected(-1,-1);
@@ -61,6 +90,19 @@ int main(int argc, char** argv) {
                     } else {
                         // move selected piece to clicked tile
                         board.applyMove(selected.x, selected.y, tile.x, tile.y);
+                        
+                        // Construct the player move to send to the server
+                        PlayerMove playerMove;
+                        playerMove.playerId = myPlayerId;
+                        playerMove.fromX = selected.x;
+                        playerMove.fromY = selected.y;
+                        playerMove.toX = tile.x;
+                        playerMove.toY = tile.y;
+
+                        // Publish move to the server
+                        mmw_publish_raw(PLAYER_MOVE_PUBLISH_TOPIC, &playerMove, sizeof(playerMove), MMW_BEST_EFFORT);
+
+                        // Reset the selected tile
                         selected = sf::Vector2i(-1,-1);
                     }
                 } else {
@@ -90,6 +132,10 @@ int main(int argc, char** argv) {
 
         window.display();
     }
+
+    // if (subscriberThread.joinable()) {
+    //     subscriberThread.join();
+    // }
 
     mmw_cleanup();
     return 0;

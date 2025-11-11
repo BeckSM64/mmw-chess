@@ -9,6 +9,9 @@ struct PlayerMove {
     int toX, toY;
 };
 
+const char* PLAYER_MOVE_PUBLISH_TOPIC = "PLAYER_MOVE_PUBLISH";
+const char* PLAYER_MOVE_SUBSCRIBE_TOPIC = "PLAYER_MOVE_SUBSCRIBE";
+
 // 8x8 board: 0 = empty, 1 = white, 2 = black (can expand to piece IDs later)
 uint8_t board[8][8] = {0};
 
@@ -23,7 +26,8 @@ void onClientMove(void* data) {
     board[move->fromY][move->fromX] = 0;
 
     // Forward move to all clients
-    mmw_publish_raw("state", move, sizeof(PlayerMove), MMW_BEST_EFFORT);
+    mmw_publish_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, move, sizeof(PlayerMove), MMW_BEST_EFFORT);
+    std::cout << "Published Message" << std::endl;
 }
 
 int main() {
@@ -33,7 +37,12 @@ int main() {
         return 1;
     }
 
-    if (mmw_create_subscriber_raw("input", onClientMove) != MMW_OK) {
+    if (mmw_create_publisher(PLAYER_MOVE_SUBSCRIBE_TOPIC) != MMW_OK) {
+        std::cerr << "Failed to create publisher\n";
+        return 1;
+    }
+
+    if (mmw_create_subscriber_raw(PLAYER_MOVE_PUBLISH_TOPIC, onClientMove) != MMW_OK) {
         std::cerr << "Failed to create subscriber\n";
         return 1;
     }
