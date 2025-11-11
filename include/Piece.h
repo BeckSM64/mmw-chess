@@ -6,19 +6,21 @@ enum class PieceColor { White, Black };
 
 class Piece {
 public:
-    Piece(PieceColor color, sf::Vector2i position, const std::string& texturePath);
-    virtual ~Piece() = default;
+    Piece(PieceColor color, const sf::Vector2i& pos, const std::string& texturePath);
+    virtual ~Piece() {}
 
-    virtual void draw(sf::RenderWindow& window);
+    PieceColor getColor() const { return color; }
+    sf::Vector2i getPosition() const { return position; }
+    void setPosition(const sf::Vector2i& newPos) { 
+        position = newPos; 
+        sprite.setPosition(static_cast<float>(newPos.x), static_cast<float>(newPos.y)); 
+    }
 
-    sf::Vector2i getPosition() const;
-    void setPosition(sf::Vector2i newPos);
-    PieceColor getColor() const;
+    sf::Sprite& getSprite() { return sprite; }
 
 protected:
     PieceColor color;
-    sf::Vector2i position;
-    std::string texturePath;
+    sf::Vector2i position; 
     sf::Texture texture;
     sf::Sprite sprite;
 };

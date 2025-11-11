@@ -1,21 +1,24 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <array>
-#include <vector>
+#include <cstdint>
 #include "Piece.h"
-// Include other pieces later
 
 class ChessBoard {
 public:
-    ChessBoard(float windowWidth, float windowHeight, float sideMargin);
-    ~ChessBoard();  // to delete pieces
+    ChessBoard(float boardWidth, float boardHeight, float padding);
+
     void draw(sf::RenderWindow& window);
+    void initPieces();
+    sf::Vector2i getTileAtPixel(float x, float y);
+    bool hasPieceAt(int x, int y, uint32_t playerId);
+    void applyMove(int fromX, int fromY, int toX, int toY);
 
 private:
+    float boardWidth, boardHeight;
     float tileSize;
-    sf::Vector2f boardPosition;
-    std::array<std::array<sf::RectangleShape, 8>, 8> squares;
-    std::vector<Piece*> pieces;  // raw pointers for C++11
+    float boardX, boardY;
+    float padding;
 
-    void initPieces();
+    std::array<std::array<Piece*, 8>, 8> squares;
 };

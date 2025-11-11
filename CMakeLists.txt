@@ -43,6 +43,7 @@ add_executable(
   ${CMAKE_SOURCE_DIR}/src/King.cpp
 )
 
+target_include_directories(Server PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 target_include_directories(Client PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 
 # Link against middleware

@@ -1,41 +1,47 @@
 #include <iostream>
 #include <thread>
-#include <mutex>
-#include <unordered_map>
-#include <cstring>
+#include <chrono>
 #include "MMW.h"
 
-struct PlayerState {
+struct PlayerMove {
     uint32_t playerId;
-    float x;
-    float y;
+    int fromX, fromY;
+    int toX, toY;
 };
 
-static std::mutex g_state_mtx;
-static std::unordered_map<uint32_t, PlayerState> g_players;
+// 8x8 board: 0 = empty, 1 = white, 2 = black (can expand to piece IDs later)
+uint8_t board[8][8] = {0};
 
-// Subscriber callback: receives the client's current position
-void position_callback(void* data) {
-    PlayerState* s = reinterpret_cast<PlayerState*>(data);
-    std::lock_guard<std::mutex> lk(g_state_mtx);
-    g_players[s->playerId] = *s;
+void onClientMove(void* data) {
+    PlayerMove* move = reinterpret_cast<PlayerMove*>(data);
+    std::cout << "Player " << move->playerId 
+              << " moves (" << move->fromX << "," << move->fromY << ") -> ("
+              << move->toX << "," << move->toY << ")\n";
+
+    // Apply move to internal board (no validation here)
+    board[move->toY][move->toX] = board[move->fromY][move->fromX];
+    board[move->fromY][move->fromX] = 0;
+
+    // Forward move to all clients
+    mmw_publish_raw("state", move, sizeof(PlayerMove), MMW_BEST_EFFORT);
 }
 
 int main() {
-    mmw_initialize("127.0.0.1", 5000);
+    mmw_set_log_level(MMW_LOG_LEVEL_OFF);
+    if (mmw_initialize("127.0.0.1", 5000) != MMW_OK) {
+        std::cerr << "Failed to initialize MMW\n";
+        return 1;
+    }
 
-    mmw_create_subscriber_raw("input", position_callback);
-    mmw_create_publisher("state");
+    if (mmw_create_subscriber_raw("input", onClientMove) != MMW_OK) {
+        std::cerr << "Failed to create subscriber\n";
+        return 1;
+    }
 
-    // Server loop: broadcast all player positions at ~60Hz
+    std::cout << "Server running..." << std::endl;
+
     while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        std::lock_guard<std::mutex> lk(g_state_mtx);
-        for (auto& kv : g_players) {
-            if (sizeof(PlayerState) > 0) {
-                mmw_publish_raw("state", &kv.second, sizeof(PlayerState), MMW_BEST_EFFORT);
-            }
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     mmw_cleanup();

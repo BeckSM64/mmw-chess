@@ -1,24 +1,14 @@
 #include "Piece.h"
 #include <iostream>
 
-Piece::Piece(PieceColor color, sf::Vector2i position, const std::string& texturePath)
-    : color(color), position(position), texturePath(texturePath) {
+Piece::Piece(PieceColor c, const sf::Vector2i& pos, const std::string& texturePath)
+    : color(c), position(pos)
+{
     if (!texture.loadFromFile(texturePath)) {
         std::cerr << "Failed to load texture: " << texturePath << std::endl;
     }
     texture.setSmooth(true);
-    
     sprite.setTexture(texture);
     sprite.setOrigin(texture.getSize().x / 2.f, texture.getSize().y / 2.f);
-
-    sprite.setScale(2.0f, 2.0f); // 90% of the original texture size
+    sprite.setPosition(static_cast<float>(pos.x), static_cast<float>(pos.y));
 }
-
-void Piece::draw(sf::RenderWindow& window) {
-    sprite.setPosition(position.x, position.y);
-    window.draw(sprite);
-}
-
-sf::Vector2i Piece::getPosition() const { return position; }
-void Piece::setPosition(sf::Vector2i newPos) { position = newPos; }
-PieceColor Piece::getColor() const { return color; }
