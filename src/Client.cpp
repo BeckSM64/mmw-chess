@@ -1,24 +1,64 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <cstdint>
-#include <thread>
 #include <atomic>
+#include <random>
+#include <sstream>
+#include <iomanip>
+#include <cstring>
 #include "MMW.h"         // still safe to initialize MMW if you want
 #include "ChessBoard.h"
 #include "PlayerMove.h"
+#include "PlayerIdResponse.h"
+#include "GameState.h"
 
 const char* PLAYER_MOVE_PUBLISH_TOPIC = "PLAYER_MOVE_PUBLISH";
 const char* PLAYER_MOVE_SUBSCRIBE_TOPIC = "PLAYER_MOVE_SUBSCRIBE";
-std::thread subscriberThread;
+const char* PLAYER_ID_REQUEST_TOPIC = "PLAYER_ID_REQUEST";
+const char* PLAYER_ID_RESPONSE_TOPIC = "PLAYER_ID_RESPONSE";
+const char* GAME_STATE_UPDATE_TOPIC = "GAME_STATE_UPDATE";
 std::atomic<bool> running{true};
 ChessBoard board(1920.f, 1080.f, 200.f);
-uint32_t myPlayerId = 1;
+std::string uuid;
+uint32_t myPlayerId = -1; // -1 is uninitialized
+GameState currentGameState;
+
+std::string generateUuid() {
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<uint64_t> dis;
+
+    uint64_t part1 = dis(gen);
+    uint64_t part2 = dis(gen);
+
+    std::stringstream ss;
+    ss << std::hex << std::setw(16) << std::setfill('0') << part1
+       << std::setw(16) << std::setfill('0') << part2;
+    return ss.str();
+}
 
 void player_move_callback(void* message) {
     PlayerMove* remotePlayerMove = reinterpret_cast<PlayerMove*>(message);
     if (remotePlayerMove->playerId != myPlayerId) {
         board.applyMove(remotePlayerMove->fromX, remotePlayerMove->fromY, remotePlayerMove->toX, remotePlayerMove->toY);
     }
+}
+
+// Assigns the local player id assigned by the server
+void onPlayerIdResponse(void* message) {
+    PlayerIdResponse* playerIdResponse = reinterpret_cast<PlayerIdResponse*>(message);
+    std::cout << "Player ID Received: " << playerIdResponse->playerId << std::endl;
+    std::cout << "Unique ID Received: " << playerIdResponse->uniqueId << std::endl;
+    std::cout << "MY UNIQUE ID: " << uuid.c_str() << std::endl;
+    if (std::string(playerIdResponse->uniqueId) == uuid) {
+        myPlayerId = playerIdResponse->playerId;
+        std::cout << "Got assigned ID: " << std::to_string(myPlayerId) << std::endl;
+    }
+}
+
+void onGameStateUpdate(void* message) {
+    GameState* gameState = reinterpret_cast<GameState*>(message);
+    currentGameState = *gameState;
 }
 
 void resizeView(sf::RenderWindow& window, sf::View& view) {
@@ -40,31 +80,25 @@ void resizeView(sf::RenderWindow& window, sf::View& view) {
 }
 
 int main(int argc, char** argv) {
-    if (argc >= 2) myPlayerId = static_cast<uint32_t>(atoi(argv[1]));
-    std::cout << "Player ID: " << myPlayerId << std::endl;
 
-    // optional: initialize middleware (harmless if not used yet)
     mmw_set_log_level(MMW_LOG_LEVEL_OFF);
     mmw_initialize("127.0.0.1", 5000);
     mmw_create_publisher(PLAYER_MOVE_PUBLISH_TOPIC);
+    mmw_create_publisher(PLAYER_ID_REQUEST_TOPIC);
     mmw_create_subscriber_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, player_move_callback);
+    mmw_create_subscriber_raw(PLAYER_ID_RESPONSE_TOPIC, onPlayerIdResponse);
+    mmw_create_subscriber_raw(GAME_STATE_UPDATE_TOPIC, onGameStateUpdate);
 
-    // Setup subscriber thread
-    // subscriberThread = std::thread([]() {
-    //     if (mmw_create_subscriber_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, player_move_callback) != MMW_OK) {
-    //         std::cout << "Failed to create subscriber" << std::endl;
-    //         return;
-    //     }
-    //     while (running) {
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //     }
-    // });
+    // Request the player id from the server using the unique id
+    uuid = generateUuid();
+    std::cout << uuid << std::endl;
+    mmw_publish(PLAYER_ID_REQUEST_TOPIC, uuid.c_str(), MMW_BEST_EFFORT);
 
-    sf::RenderWindow window(sf::VideoMode(1280,720), "MMW Chess - Local Play");
+    sf::RenderWindow window(sf::VideoMode(1280,720), "MMW Chess");
     sf::View view(sf::FloatRect(0,0,1920,1080));
     window.setView(view);
 
-    // ChessBoard board(1920.f, 1080.f, 200.f);
+    // Setup the chess board
     board.initPieces();
 
     sf::Vector2i selected(-1,-1);
@@ -72,11 +106,13 @@ int main(int argc, char** argv) {
     while (window.isOpen()) {
         sf::Event e;
         while (window.pollEvent(e)) {
+            // std::cout << currentGameState.playerTurnId << std::endl;
+            // std::cout << myPlayerId << std::endl;
             if (e.type == sf::Event::Closed) {
                 window.close();
             } else if (e.type == sf::Event::Resized) {
                 resizeView(window, view);
-            } else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
+            } else if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left && currentGameState.isGameStarted && currentGameState.playerTurnId == myPlayerId) {
                 // Convert pixel -> world coords (respecting view/viewport)
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
@@ -132,10 +168,6 @@ int main(int argc, char** argv) {
 
         window.display();
     }
-
-    // if (subscriberThread.joinable()) {
-    //     subscriberThread.join();
-    // }
 
     mmw_cleanup();
     return 0;
