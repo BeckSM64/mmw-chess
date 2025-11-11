@@ -23,6 +23,7 @@ ChessBoard board(1920.f, 1080.f, 200.f);
 std::string uuid;
 uint32_t myPlayerId = -1;
 GameState currentGameState;
+bool isMyTurn;
 
 std::string generateUuid() {
     std::random_device rd;
@@ -61,6 +62,9 @@ void onPlayerIdResponse(void* message) {
 void onGameStateUpdate(void* message) {
     GameState* gameState = reinterpret_cast<GameState*>(message);
     currentGameState = *gameState;
+    if (currentGameState.playerTurnId == myPlayerId) {
+        isMyTurn = true;
+    }
 }
 
 void resizeView(sf::RenderWindow& window, sf::View& view) {
@@ -114,7 +118,7 @@ int main() {
             else if (e.type == sf::Event::MouseButtonPressed &&
                      e.mouseButton.button == sf::Mouse::Left &&
                      currentGameState.isGameStarted &&
-                     currentGameState.playerTurnId == myPlayerId) {
+                     isMyTurn) {
 
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
@@ -128,6 +132,7 @@ int main() {
                         board.applyMove(selected.x, selected.y, tile.x, tile.y);
                         PlayerMove playerMove{myPlayerId, selected.x, selected.y, tile.x, tile.y};
                         mmw_publish_raw(PLAYER_MOVE_PUBLISH_TOPIC, &playerMove, sizeof(playerMove), MMW_BEST_EFFORT);
+                        isMyTurn = false;
                         selected = sf::Vector2i(-1,-1);
                     }
                 } else selected = sf::Vector2i(-1,-1);

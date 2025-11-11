@@ -36,6 +36,12 @@ void onClientMove(void* data) {
 
     // Forward move to all clients
     mmw_publish_raw(PLAYER_MOVE_SUBSCRIBE_TOPIC, move, sizeof(PlayerMove), MMW_BEST_EFFORT);
+    if (gameState.playerTurnId == 0) {
+        gameState.playerTurnId = 1;
+    } else {
+        gameState.playerTurnId = 0;
+    }
+    mmw_publish_raw(GAME_STATE_UPDATE_TOPIC, &gameState, sizeof(gameState), MMW_BEST_EFFORT);
 }
 
 void onPlayerIdRequest(const char* uuid) {
