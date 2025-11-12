@@ -32,7 +32,8 @@ FetchContent_MakeAvailable(SFML)
 add_executable(Server ${CMAKE_SOURCE_DIR}/src/Server.cpp)
 add_executable(
   Client
-  ${CMAKE_SOURCE_DIR}/src/Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/main.cpp
+  ${CMAKE_SOURCE_DIR}/src/GameClient.cpp
   ${CMAKE_SOURCE_DIR}/src/ChessBoard.cpp
   ${CMAKE_SOURCE_DIR}/src/Piece.cpp
   ${CMAKE_SOURCE_DIR}/src/Pawn.cpp
